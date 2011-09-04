@@ -1,0 +1,46 @@
+{% extends "MaksaDemoBundle::layout.html.twig" %}
+
+{% block title "Maksa.ee - Payment Demo" %}
+
+{% block content %}
+
+<h1>Maksa.ee - Payment Demo</h1>
+
+<table id="demo">
+    <thead>
+        <tr>
+            <td>Name</td>
+            <td>Description</td>
+            <td>One item price (EUR)</td>
+            <td>Quantity</td>
+            <td>Price (EUR)</td>
+        </tr>
+    </thead>
+    {% for order in orders %}
+    <tbody>
+        <tr>
+            <td>{{ order.name }}</td>
+            <td>{{ order.description }}</td>
+            <td>{{ "%.2f"|format(order.oneItemPrice) }}</td>
+            <td>{{ order.quantity }}</td>
+            <td>{{ "%.2f"|format(order.quantity * order.oneItemPrice) }}</td>
+        </tr>
+    </tbody>
+    {% endfor %}
+    <tfoot>
+        <tr>
+            <td colspan="4">Total price (EUR)</td>
+            <td>
+                <div>{{ "%.2f"|format(amount) }}</div>
+                <br />
+                <div>
+                    <form action="{{ link }}" method="post">
+                        <input type="hidden" name="signedRequest" value="{{ signedRequest }}" />
+                        <input class="symfony-button-green" type="submit" value="Pay with Maksa.ee" />
+                    </form>
+                </div>
+            </td>
+        </tr>
+    </tfoot>
+</table>
+{% endblock %}
