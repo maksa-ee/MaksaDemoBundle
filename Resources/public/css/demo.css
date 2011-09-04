@@ -86,6 +86,9 @@ table#demo tbody,
 table#demo tfoot {
     text-align: center;
 }
+table#demo thead {
+    background: #EFEFEF;
+}
 table#demo thead tr td,
 table#demo tbody tr td {
     border: 1px solid #DFDFDF;
