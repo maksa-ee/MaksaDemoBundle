@@ -78,12 +78,17 @@ class DemoController extends Controller
             )
         );
 
+        $request = $this->getRequest();
+        $domain = urlencode($request->query->get('domain'));
+        if (!$domain) {
+                $domain = 'maksa.ee';
+        }
         return array(
             'signedRequest' => $rawData,
             'orders'        => $order,
             'amount'        => $amount,
             //'link'        => 'http://maksa.ee/pay',
-            'link'          => 'http://maksa.ee/test',
+            'link'          => 'http://'.$domain.'/test',
         );
     }
 
