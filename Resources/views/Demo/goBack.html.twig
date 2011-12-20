@@ -1,0 +1,92 @@
+{% extends "MaksaDemoBundle::layout.html.twig" %}
+
+{% block title "Maksa.ee - Payment Demo" %}
+
+{% block javascripts %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+jQuery(function() {
+    {% if status == 'wait' %}
+
+    var maksaWaiting = true;
+    var maksaCheck = function() {
+        if (maksaWaiting) {
+            jQuery.ajax({
+                type: "POST",
+                async: true,
+                url: '{{ link }}',
+                data: '',
+                success: function (data) {
+                    if (data.status == 'success') {
+                        jQuery("#maksa-payment-wait").hide();
+                        jQuery("#maksa-payment-success").show();
+                        maksaWaiting = false;
+                    } else if(data.status == 'failure') {
+                        jQuery("#maksa-payment-wait").hide();
+                        jQuery("#maksa-payment-failure").show();
+                        maksaWaiting = false;
+                    }
+                }
+            });
+            setTimeout(function() {
+                maksaCheck();
+            }, 3000);
+        }
+    };
+    maksaCheck();
+    {% else %}
+
+        jQuery("#maksa-payment-wait").hide();
+        jQuery("#maksa-payment-{{status}}").show();
+    {% endif %}
+
+});
+</script>
+{% endblock %}
+
+{% block content %}
+
+<h1>Maksa.ee - Payment Demo</h1>
+
+<div>
+    <div id="maksa-payment-wait">
+        <table>
+            <tr>
+                <td>
+                    <img src="{{ asset('bundles/maksademo/images/wait.png') }}" alt="Please wait while your order is being processed..." />
+                </td>
+                <td>
+                    <span>Please wait while your order is being processed...</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div id="maksa-payment-success">
+        <table>
+            <tr>
+                <td>
+                    <img src="{{ asset('bundles/maksademo/images/success.png') }}" alt="Payment success!" />
+                </td>
+                <td>
+                    <span>Payment success!</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div id="maksa-payment-failure">
+        <table>
+            <tr>
+                <td>
+                    <img src="{{ asset('bundles/maksademo/images/failure.png') }}" alt="Payment failure!" />
+                </td>
+                <td>
+                    <span>Payment failure!</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

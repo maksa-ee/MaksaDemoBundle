@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2010 "Cravler", http://github.com/cravler
+ * Copyright (c) 2011 "Cravler", http://github.com/cravler
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -25,12 +25,14 @@
 
 namespace Maksa\DemoBundle\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\HttpFoundation\Response;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use \Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use \Symfony\Component\HttpFoundation\Response;
+use \Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use \Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
 
-use Maksa\Bundle\UlinkBundle\Exception\UlinkException;
+use \Maksa\Bundle\UlinkBundle\Exception\UlinkException;
+
+use \Maksa\DemoBundle\Entity\Order;
 
 /**
  * @author Cravler <http://github.com/cravler>
@@ -43,12 +45,33 @@ class DemoController extends Controller
      */
     public function requestAction()
     {
-        /* @var $ulink \Maksa\Bundle\UlinkBundle\Service */
+        /* @var \Maksa\Bundle\UlinkBundle\Service $ulink */
         $ulink = $this->get('maksa_ulink.service');
 
-        $clientTransactionId = 77;
+        $em      = $this->getDoctrine()->getEntityManager();
+        $session = $this->getRequest()->getSession();
 
-        $order = array(
+        $order   = null;
+        $orderId = $session->get('maksa_demo_order_id');
+
+        // find order
+        if ($orderId) {
+            /* @var \Maksa\DemoBundle\Entity\Order $order */
+            $order = $em->getRepository('MaksaDemoBundle:Order')->find($orderId);
+            if ($order && Order::STATUS_WAIT !== $order->getStatus()) {
+                $order = null;
+            }
+        }
+
+        // create new order
+        if (!$order) {
+            $order = new Order;
+            $em->persist($order);
+            $em->flush();
+            $session->set('maksa_demo_order_id', $order->getId());
+        }
+
+        $items = array(
             array(
                 'name'         => '11" MacBook Air',
                 'description'  => '1.6GHz dual-core Intel Core i5 processor, 4GB memory, 128GB flash storage1, Intel HD Graphics 3000',
@@ -64,42 +87,79 @@ class DemoController extends Controller
         );
 
         $amount = 0;
-        foreach($order as $item) {
+        foreach($items as $item) {
             $amount += $item['oneItemPrice'] * $item['quantity'];
         }
 
         $rawData = $ulink->encrypt(
             array(
-                'clientTransactionId' => $clientTransactionId,
+                'clientTransactionId' => $order->getId(),
                 'amount'              => $amount,
-                'order'               => $order,
-                'goBackUrl'           => $this->generateUrl('maksa_go_back', array(), true),
-                'responseUrl'         => $this->generateUrl('maksa_response', array(), true),
+                'order'               => $items,
+                'goBackUrl'           => $this->generateUrl('maksa_go_back', array('orderId' => $order->getId()), true),
+                'responseUrl'         => $this->generateUrl('maksa_response', array(), true) . '?type=plain',
             )
         );
 
         $request = $this->getRequest();
-        $domain = urlencode($request->query->get('domain'));
-        if (!$domain) {
-                $domain = 'maksa.ee';
-        }
+        $domain  = urlencode($request->query->get('domain', 'maksa.ee'));
+
         return array(
             'signedRequest' => $rawData,
-            'orders'        => $order,
+            'items'         => $items,
             'amount'        => $amount,
-            //'link'        => 'http://maksa.ee/pay',
-            'link'          => 'http://'.$domain.'/test',
+            //'link'        => 'https://maksa.ee/pay',
+            'link'          => 'https://'.$domain.'/pay/test',
         );
     }
 
     /**
-     * @Route("/goback", name="maksa_go_back")
+     * @Route("/goback/{orderId}", name="maksa_go_back")
      * @Template()
      */
-    public function goBackAction()
+    public function goBackAction($orderId)
     {
-        $response = new Response('Go back page');
-        $response->headers->set('Content-Type', 'text/plain');
+        // find order
+        $em = $this->getDoctrine()->getEntityManager();
+        /* @var \Maksa\DemoBundle\Entity\Order $order */
+        $order = $em->getRepository('MaksaDemoBundle:Order')->find($orderId);
+
+        if (null === $order) {
+            $this->createNotFoundException(sprintf('Order with id "%s" not found.', $orderId));
+        }
+
+        return array(
+            'status' => (
+                Order::STATUS_WAIT === $order->getStatus() ?
+                    'wait' : (
+                        Order::STATUS_SUCCESS === $order->getStatus() ?
+                            'success' : 'failure'
+                    )
+            ),
+            'link'   => $this->generateUrl('maksa_wait', array('orderId' => $order->getId())),
+        );
+    }
+
+    /**
+     * @Route("/wait/{orderId}", name="maksa_wait")
+     */
+    public function waitAction($orderId)
+    {
+        $response = array(
+            'status' => 'wait',
+        );
+
+        // find order
+        $em = $this->getDoctrine()->getEntityManager();
+        /* @var \Maksa\DemoBundle\Entity\Order $order */
+        $order = $em->getRepository('MaksaDemoBundle:Order')->find($orderId);
+
+        if ($order && Order::STATUS_WAIT !== $order->getStatus()) {
+            $response['status'] = (Order::STATUS_SUCCESS === $order->getStatus() ? 'success' : 'failure');
+        }
+
+        $response = new Response(json_encode($response));
+        $response->headers->set('Content-Type', 'application/json');
         return $response;
     }
 
@@ -127,16 +187,32 @@ class DemoController extends Controller
                 }
                 $response['isTest'] = $testPayment;
 
+                // find order
+                $em = $this->getDoctrine()->getEntityManager();
+                /* @var \Maksa\DemoBundle\Entity\Order $order */
+                $order = $em->getRepository('MaksaDemoBundle:Order')->find($responseData['clientTransactionId']);
+
+                if (null === $order) {
+                    $this->createNotFoundException(sprintf('Order with id "%s" not found.', $responseData['clientTransactionId']));
+                }
+
                 // payment success
                 if ($responseData['success']) {
                     // do something
+                    $order->setStatus(Order::STATUS_SUCCESS);
+
                     $response['msg'] = 'Payment success.';
                 }
                 // payment failure
                 else {
                     // do something
+                    $order->setStatus(Order::STATUS_FAILURE);
+
                     $response['msg'] = 'Payment failure.';
                 }
+
+                $em->persist($order);
+                $em->flush();
 
                 $response['status'] = 'OK';
 
@@ -147,8 +223,15 @@ class DemoController extends Controller
         }
 
         $response = new Response(json_encode($response));
-        //$response->headers->set('Content-Type', 'application/json');
-        $response->headers->set('Content-Type', 'text/plain');
+
+        $type = urlencode($request->query->get('type', 'json'));
+        if ('plain' == $type) {
+            $response->headers->set('Content-Type', 'text/plain');
+        }
+        else {
+            $response->headers->set('Content-Type', 'application/json');
+        }
+
         return $response;
     }
 }

@@ -16,14 +16,14 @@
             <td>Price (EUR)</td>
         </tr>
     </thead>
-    {% for order in orders %}
+    {% for item in items %}
     <tbody>
         <tr>
-            <td>{{ order.name }}</td>
-            <td>{{ order.description }}</td>
-            <td>{{ "%.2f"|format(order.oneItemPrice) }}</td>
-            <td>{{ order.quantity }}</td>
-            <td>{{ "%.2f"|format(order.quantity * order.oneItemPrice) }}</td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.description }}</td>
+            <td>{{ "%.2f"|format(item.oneItemPrice) }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ "%.2f"|format(item.quantity * item.oneItemPrice) }}</td>
         </tr>
     </tbody>
     {% endfor %}

@@ -100,3 +100,31 @@ table#demo tfoot tr td:first-child {
 table#demo td {
     padding: 15px;
 }
+
+#maksa-payment-success,
+#maksa-payment-failure {
+    display: none;
+}
+
+#maksa-payment-wait table,
+#maksa-payment-success table,
+#maksa-payment-failure table {
+    margin: 0 auto;
+}
+
+#maksa-payment-wait table td:last-child span,
+#maksa-payment-success table td:last-child span,
+#maksa-payment-failure table td:last-child span {
+    margin-left: 15px;
+    font-size: 26px;
+}
+
+#maksa-payment-wait table td:last-child span {
+    color: #FBB14F;
+}
+#maksa-payment-success table td:last-child span {
+    color: #51980C;
+}
+#maksa-payment-failure table td:last-child span {
+    color: #E21A00;
+}

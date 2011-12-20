@@ -23,13 +23,57 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-namespace Maksa\DemoBundle;
+namespace Maksa\DemoBundle\Entity;
 
-use \Symfony\Component\HttpKernel\Bundle\Bundle;
+use \Doctrine\ORM\Mapping as ORM;
+use \Symfony\Component\Validator\Constraints as Assert;
 
 /**
+ * @ORM\Entity
+ * @ORM\Table(name="maksa_demo_order")
+ *
  * @author Cravler <http://github.com/cravler>
  */
-class MaksaDemoBundle extends Bundle
+ 
+class Order
 {
+    const STATUS_WAIT    = 0;
+    const STATUS_SUCCESS = 1;
+    const STATUS_FAILURE = 2;
+
+    /**
+     * @ORM\Id
+     * @ORM\Column(type="integer")
+     * @ORM\GeneratedValue(strategy="AUTO")
+     */
+    protected $id;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    protected $status = 0;
+
+    /**
+     * @return mixed
+     */
+    public function getId()
+    {
+        return $this->id;
+    }
+
+    /**
+     * @return int
+     */
+    public function getStatus()
+    {
+        return $this->status;
+    }
+
+    /**
+     * @param int $status
+     */
+    public function setStatus($status = self::STATUS_WAIT)
+    {
+        $this->status = $status;
+    }
 }
